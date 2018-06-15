@@ -1,0 +1,65 @@
+---
+title: "Bhuvana_HW5"
+author: "Bhuvana A K"
+date: "June 13, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Data Munging
+
+```{r Data Munging}
+setwd("C:/Users/Anand/Documents/SMU/DDS/GITHUB/MSDS-Assignments/MSDS-DDS-HW5")
+df <- read.table(file = "../../../yob2016.txt",sep = ";")
+colnames(df) = c("name2016","gender2016","amount2016")
+head(df)
+summary(df)
+str(df)
+library(stringr)
+getRepeatedNames <- function(value, repeatText="yyy"){
+for (i in value){
+ if(all.equal(str_sub(i,str_length(i)-2,str_length(i)),repeatText) == TRUE){
+  y <-i
+   }
+  }
+ y
+}
+y <- getRepeatedNames(df$name2016)
+y
+
+#y contains the repeated names
+library(dplyr)
+cleanUpData <- function(dframe, removeText){
+filter(dframe, name2016 != removeText)
+}
+y2016 <- cleanUpData(df,y)
+```
+
+#### Data Merging
+
+```{r Data Merging}
+y2015 <- read.table(file = "../../../yob2015.txt",sep = ",")
+colnames(y2015) = c("name2015","gender2015","amount2015")
+tail(y2015,10)
+```
+###### The last 10 rows of 2015 data are all Male child names with total children given that name for 2015 = 5.
+``` {r Data Merging Continued}
+final <- merge(y2016, y2015, by.x="name2016",by.y="name2015",all=FALSE)
+
+str(final)
+final$totalCount <- final$amount2015+final$amount2016
+final <- final[order(-final$totalCount),]
+head(final,10)
+final <- filter(final,gender2015=="F", gender2016=="F" )
+head(final,10)
+top10Final <- final[1:10,c(1,6)]
+colnames(top10Final) <- c("Girl_Baby_Name","Total_Count_From_2015And2016")
+write.csv(top10Final,file="PopularGirlBabyNames.csv")
+library(dataMaid)
+makeCodebook(final)
+makeCodebook(top10Final)
+
+```
