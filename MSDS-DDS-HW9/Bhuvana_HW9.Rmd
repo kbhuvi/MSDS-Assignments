@@ -1,0 +1,132 @@
+---
+title: "Bhuvana_HW9"
+author: "Bhuvana A K"
+date: "July 15, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r scrapping data}
+library("rvest")
+library("humaniformat")
+url <- 'http://www.imdb.com/title/tt1201607/fullcredits?ref_=tt_ql_1'# reads the url
+webpage <- read_html(url) # add the url into a variable
+castTableData <- url %>%
+  html() %>%
+  html_nodes(xpath='//*[@id="fullcredits_content"]/table[3]') %>%
+  html_table()
+castDF <- as.data.frame(castTableData[[1]])
+head(castDF)
+nrow(castDF)
+# Exclude unwanted columns
+castDF <- castDF[,-c(1,3)]
+head(castDF)
+#Remove empty rows
+nrow(castDF)
+castDF <- sapply(castDF,function(x) {x <- gsub("\n ","",x)})
+colnames(castDF) <- c("Actor","Character")
+nrow(castDF)
+head(castDF,11)
+# update value for Mr.Warwick
+castDF[grep("Warwick", castDF[,1]),2] <- "Griphook  /  Professor  Filius  Flitwick"
+head(castDF,11)
+nrow(castDF)
+# Removing the row with value 'Rest of cast listed alphabetically'
+castDF <- castDF[-grep("^Rest of cast listed alphabetically",castDF[,1]),]
+nrow(castDF)
+#Removing all empty rows
+castDF <- castDF[!(castDF[,1] == ""), ]
+# get the First Name, Middle Name & Last Name
+middle_name <- middle_name(castDF[,1])
+middle_name <- replace(middle_name, is.na(middle_name), "") # replace NA
+
+first_name <- paste(first_name(castDF[,1]),middle_name)
+last_name <- last_name(castDF[,1])
+# Finally construct the Data frame
+castDataFrame <- data.frame( FirstName = first_name, Surname = last_name, character = castDF[,2])
+# Top 10 rows from Data frame
+head(castDataFrame,10)
+
+#{r NBA scrapping data}
+library("rvest")
+library("stringr")
+library("plyr")
+library(ggplot2)
+# Scrapping NBA team data
+url <- 'http://www.espn.com/nba/team/stats/_/name/sa/san-antonio-spurs'# reads the url
+webpage <- read_html(url) # add the url into a variable
+espnData <- url %>%
+  html() %>%
+  html_nodes(xpath='//*[@id="my-players-table"]/div[4]/div[3]/table[1]') %>%
+  html_table()
+espnDF <- as.data.frame(espnData[[1]])
+
+espnDF <- espnDF[-c(1,2,nrow(espnDF)),]
+colnames(espnDF) <- c("PLAYER","FGM","FGA","FGP","P3PM","P3PA","P3P.","FTM","FTA","FT.","P2PM","P2PA","P2P.","PPS","AFG.")
+playerList <- strsplit(espnDF$PLAYER, ",")
+playerDf <- ldply(playerList)
+colnames(playerDf) <- c("Player", "Position")
+playerDf
+
+shootStatsData <- transform( 
+    espnDF,
+    FGM = as.numeric(FGM),
+    FGA = as.numeric(FGA),
+    FGP = as.numeric(FGP),
+    P3PM = as.numeric(P3PM),
+    P3PA = as.numeric(P3PA),
+    P3P. = as.numeric(P3P.),
+    FTM = as.numeric(FTM),
+    FTA = as.numeric(FTA),
+    FT. = as.numeric(FT.),
+    P2PM = as.numeric(P2PM),
+    P2PA = as.numeric(P2PA),
+    P2P. = as.numeric(P2P.),
+    PPS = as.numeric(PPS),
+    AFG. = as.numeric(AFG.)
+)
+
+shootStatsData$PLAYER <- playerDf$Player
+shootStatsData$Position <- playerDf$Position
+shootStatsData
+str(shootStatsData)
+```
+
+
+## Including Plots
+
+```{r pressure, echo=FALSE}
+
+
+library("RColorBrewer")
+colors <- brewer.pal(n = 6, name = "Spectral")
+barChart <- shootStatsData$FGP
+leg <- c(paste(shootStatsData$PLAYER,"-",shootStatsData$Position))
+mar.default <- c(5,4,4,2) + 0.1
+par(mar = mar.default + c(0, 4, 0, 0))         # add space to LHS of plot
+par(las=2)
+barplot(barChart,width=2,space =2,col=colors,horiz="True",names.arg = shootStatsData$PLAYER,main="Field Goal % per Game for Each Player",xlab="Field Goal %",ylab="", axes="T",axis.lty=10,axisnames = TRUE,xlim = c(0,1))
+mtext(text="Players", side=2, line=4, las=2)             # add horiz y-axis label
+legend("bottomright",legend=leg,cex=0.50,ncol=2)
+
+
+ggplot( shootStatsData , aes( PLAYER, FGP, fill=Position ) ) +
+    geom_bar(stat="identity") +
+    scale_fill_manual(values=colors) +
+    labs(title="Field Goals % Per Game",x ="Players", y = "Field Goal %" ) +
+    coord_flip() +  theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
